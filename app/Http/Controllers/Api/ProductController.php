@@ -28,7 +28,11 @@ class ProductController extends Controller
             'image' => 'nullable|image|max:2048',
         ]);
 
-        $product = Product::create($validated);
+        $product = Product::create([
+            'name' => $validated['name'],
+            'description' => $validated['description'] ?? null,
+            'price' => $validated['price'],
+        ]);
 
         if ($request->hasFile('image')) {
             $product->addMediaFromRequest('image')->toMediaCollection('image');
@@ -53,7 +57,11 @@ class ProductController extends Controller
             'image' => 'nullable|image|max:2048',
         ]);
 
-        $product->update($validated);
+        $product->update([
+            'name' => $validated['name'],
+            'description' => $validated['description'] ?? null,
+            'price' => $validated['price'],
+        ]);
 
         if ($request->hasFile('image')) {
             $product->addMediaFromRequest('image')->toMediaCollection('image');

@@ -1,7 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head } from '@inertiajs/vue3';
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 
 const form = ref({
@@ -15,6 +15,18 @@ const form = ref({
 const isEditing = ref(false);
 const message = ref('');
 const products = ref([]);
+const imagePreview = ref(null);
+const searchQuery = ref('');
+
+const filteredProducts = computed(() => {
+    if (!searchQuery.value) {
+        return products.value;
+    }
+    const query = searchQuery.value.toLowerCase();
+    return products.value.filter(product => 
+        product.name.toLowerCase().includes(query)
+    );
+});
 
 const fetchProducts = async () => {
     try {
@@ -26,7 +38,14 @@ const fetchProducts = async () => {
 };
 
 const handleImageUpload = (event) => {
-    form.value.image = event.target.files[0];
+    const file = event.target.files[0];
+    if (file) {
+        form.value.image = file;
+        imagePreview.value = URL.createObjectURL(file);
+    } else {
+        form.value.image = null;
+        imagePreview.value = null;
+    }
 };
 
 const submitProduct = async () => {
@@ -70,7 +89,10 @@ const editProduct = (product) => {
         price: product.price,
         image: null
     };
-    document.getElementById('image').value = '';
+    imagePreview.value = product.image_url || null;
+    if (document.getElementById('image')) {
+        document.getElementById('image').value = '';
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
@@ -87,6 +109,7 @@ const deleteProduct = async (id) => {
 const resetForm = () => {
     isEditing.value = false;
     form.value = { id: null, name: '', description: '', price: '', image: null };
+    imagePreview.value = null;
     if(document.getElementById('image')) {
         document.getElementById('image').value = '';
     }
@@ -129,6 +152,10 @@ onMounted(() => {
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Imagem do Produto</label>
                             <input id="image" type="file" @change="handleImageUpload" accept="image/*" class="w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm p-2 bg-white" />
+                            <div v-if="imagePreview" class="mt-3">
+                                <p class="text-sm font-medium text-gray-700 mb-1">Pré-visualização:</p>
+                                <img :src="imagePreview" alt="Preview" class="h-24 w-24 object-cover rounded-md border border-gray-200">
+                            </div>
                         </div>
                         <div class="flex space-x-2 pt-2">
                             <button type="submit" class="px-4 py-2 bg-gray-800 text-white text-sm font-semibold rounded-md hover:bg-gray-700 transition">
@@ -144,26 +171,40 @@ onMounted(() => {
 
                 <!-- Tabela de Produtos -->
                 <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
-                    <h3 class="text-lg font-bold mb-4 text-gray-900">Produtos Cadastrados</h3>
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold text-gray-900">Produtos Cadastrados</h3>
+                        
+                        <!-- Barra de Pesquisa -->
+                        <div class="w-1/3">
+                            <input v-model="searchQuery" type="text" placeholder="Pesquisar produto pelo nome..." class="w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm px-3 py-2 text-sm" />
+                        </div>
+                    </div>
                     
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
                                 <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Imagem</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produto</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descrição</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Preço</th>
                                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
-                                <tr v-for="product in products" :key="product.id">
+                                <tr v-for="product in filteredProducts" :key="product.id">
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <img v-if="product.image_url" :src="product.image_url" alt="Imagem" class="h-12 w-12 object-cover rounded-md border border-gray-200">
-                                        <span v-else class="text-gray-400 text-xs italic">Sem imagem</span>
+                                        <div class="flex items-center">
+                                            <div class="flex-shrink-0 h-12 w-12">
+                                                <img v-if="product.image_url" :src="product.image_url" alt="Imagem" class="h-12 w-12 object-cover rounded-md border border-gray-200">
+                                                <div v-else class="h-12 w-12 rounded-md border border-gray-200 bg-gray-50 flex items-center justify-center text-center">
+                                                    <span class="text-gray-400 text-[10px] leading-tight italic">Sem<br>img</span>
+                                                </div>
+                                            </div>
+                                            <div class="ml-4">
+                                                <div class="text-sm font-medium text-gray-900">{{ product.name }}</div>
+                                            </div>
+                                        </div>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ product.name }}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ product.description || 'Sem descrição' }}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">€ {{ parseFloat(product.price).toFixed(2) }}</td>
                                     
@@ -176,8 +217,11 @@ onMounted(() => {
                                         </button>
                                     </td>
                                 </tr>
-                                <tr v-if="products.length === 0">
-                                    <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">Nenhum produto cadastrado ainda.</td>
+                                <tr v-if="filteredProducts.length === 0">
+                                    <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">
+                                        <span v-if="searchQuery">Nenhum produto encontrado para "{{ searchQuery }}".</span>
+                                        <span v-else>Nenhum produto cadastrado ainda.</span>
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>

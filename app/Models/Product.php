@@ -6,9 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 use \Spatie\MediaLibrary\InteractsWithMedia;
 use \Spatie\MediaLibrary\MediaCollections\Models\Media;
 
-#[Fillable(['name', 'description', 'price', 'image'])]
 class Product extends Model implements \Spatie\MediaLibrary\HasMedia
 {
+    protected $fillable = ['name', 'description', 'price'];
     use InteractsWithMedia;
 
     public function registerMediaCollections(): void
